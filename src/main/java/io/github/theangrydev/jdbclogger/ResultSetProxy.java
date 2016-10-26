@@ -45,6 +45,9 @@ public class ResultSetProxy implements InvocationHandler {
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+        if (isGetMetaDataMethod(method) || isCloseMethod(method)) {
+            return method.invoke(target, args);
+        }
         if (closed) {
             if (isGetMethod(method) && resultPointer >= allResults.size()) {
                 throw new SQLException(format("Result set exhausted. There were %d result(s) only", allResults.size()));
@@ -61,10 +64,6 @@ public class ResultSetProxy implements InvocationHandler {
             if (isNextMethod(method) && resultPointer == allResults.size()) {
                 return false;
             }
-            if (isCloseMethod(method)) {
-                resultPointer = 0;
-                return null;
-            }
         } else {
             if (isGetMethod(method)) {
                 int columnIndex = determineColumnIndex(method, args);
@@ -78,13 +77,21 @@ public class ResultSetProxy implements InvocationHandler {
                 allResults.add(currentResult);
                 return result;
             }
-            if (isCloseMethod(method)) {
+            if (isBeforeFirstMethod(method)) {
                 resultPointer = 0;
                 closed = true;
                 return null;
             }
         }
-        return method.invoke(target, args);
+        throw new UnsupportedOperationException(format("Method '%s' is not supported by this proxy", method));
+    }
+
+    private boolean isCloseMethod(Method method) {
+        return methodNameIs(method);
+    }
+
+    private boolean methodNameIs(Method method) {
+        return method.getName().equals("close");
     }
 
     private boolean isGetMetaDataMethod(Method method) {
@@ -99,8 +106,8 @@ public class ResultSetProxy implements InvocationHandler {
         return method.getName().equals("next");
     }
 
-    private boolean isCloseMethod(Method method) {
-        return method.getName().equals("close");
+    private boolean isBeforeFirstMethod(Method method) {
+        return method.getName().equals("beforeFirst");
     }
 
     private int determineColumnIndex(Method method, Object[] args) {

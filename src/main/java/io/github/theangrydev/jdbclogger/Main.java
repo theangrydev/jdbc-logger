@@ -80,7 +80,7 @@ public class Main {
                 while (resultSet.next()) {
                     extractRow(resultSet, tableLogger);
                 }
-                resultSet.close();
+                resultSet.beforeFirst();
                 tableLogger.print();
                 return table.get();
             } catch (SQLException e) {
