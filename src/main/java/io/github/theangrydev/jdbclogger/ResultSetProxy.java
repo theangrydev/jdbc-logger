@@ -18,6 +18,7 @@ public class ResultSetProxy implements InvocationHandler {
     private final int columnCount;
 
     private int resultPointer;
+    private boolean resultSetConsumed;
     private boolean closed;
     private Object[] currentResult;
     private final List<Object[]> allResults = new ArrayList<>();
@@ -45,10 +46,17 @@ public class ResultSetProxy implements InvocationHandler {
 
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        if (isGetMetaDataMethod(method) || isCloseMethod(method)) {
+        if (isGetMetaDataMethod(method)) {
+            return method.invoke(target, args);
+        }
+        if (isCloseMethod(method)) {
+            closed = true;
             return method.invoke(target, args);
         }
         if (closed) {
+            throw new SQLException("Already closed");
+        }
+        if (resultSetConsumed) {
             if (isGetMethod(method) && resultPointer >= allResults.size()) {
                 throw new SQLException(format("Result set exhausted. There were %d result(s) only", allResults.size()));
             }
@@ -79,7 +87,7 @@ public class ResultSetProxy implements InvocationHandler {
             }
             if (isBeforeFirstMethod(method)) {
                 resultPointer = 0;
-                closed = true;
+                resultSetConsumed = true;
                 return null;
             }
         }
