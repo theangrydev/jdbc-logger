@@ -6,16 +6,16 @@ import java.lang.reflect.Proxy;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 
-public class PreparedStatementProxy implements InvocationHandler {
+public class ResultSetResultProxy<T> implements InvocationHandler {
 
-    private final PreparedStatement target;
+    private final T target;
 
-    private PreparedStatementProxy(PreparedStatement target) {
+    private ResultSetResultProxy(T target) {
         this.target = target;
     }
 
-    public static PreparedStatement proxy(PreparedStatement target) {
-        return (PreparedStatement) Proxy.newProxyInstance(PreparedStatement.class.getClassLoader(), new Class<?>[]{PreparedStatement.class}, new PreparedStatementProxy(target));
+    public static <T> T resultSetResultProxy(T target, Class<T> interfaceToProxy) {
+        return interfaceToProxy.cast(Proxy.newProxyInstance(PreparedStatement.class.getClassLoader(), new Class<?>[]{PreparedStatement.class}, new ResultSetResultProxy<>(target)));
     }
 
     @Override
